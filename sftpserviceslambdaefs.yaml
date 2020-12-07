@@ -1,0 +1,735 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+
+Parameters:
+#  VPC:
+#        Description: VPC where to put SFTP Endpoint
+#        Type: "AWS::EC2::VPC::Id"
+#  SubnetIDs:
+#        Description: Subnets where to put SFTP Endpoint
+#        Type: "List<AWS::EC2::Subnet::Id>"
+#  SftpKey:
+#        Description: Sftp Key
+#        Type: String
+  DNSPHZName:
+        Description: PHZ for client Zone
+        Type: String
+        Default: "myexample.com"
+  VPCCIDR:
+    Type: String
+    Description: IP Address range for the Workload VPC
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.1.0.0/16
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  PrivateSubnetCIDRA:
+    Type: String
+    Description: IP Address range for the Private Subnet A
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.1.0.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  PrivateSubnetAZA:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: AZ A to select / must be in physical zone 1
+
+  PrivateSubnetCIDRB:
+    Type: String
+    Description: IP Address range for the Private Subnet B
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.1.1.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  PrivateSubnetAZB:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: AZ B to select / must be in physical zone 2
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.small
+
+  AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock:
+        Ref: VPCCIDR
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone: !Ref PrivateSubnetAZA
+      CidrBlock:
+        Ref: PrivateSubnetCIDRA
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone: !Ref PrivateSubnetAZB
+      CidrBlock:
+        Ref: PrivateSubnetCIDRB
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+  PrivateSubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetA
+      RouteTableId:
+        Ref: PrivateRouteTable
+  PrivateSubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetB
+      RouteTableId:
+        Ref: PrivateRouteTable
+
+
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: '*'
+          Effect: Allow
+          Resource: '*'
+          Principal: '*'
+      RouteTableIds:
+        - Ref: PrivateRouteTable
+
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - .s3
+      VpcId:
+        Ref: VPC
+
+
+  SSMVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - .ssm
+      SubnetIds:
+        - Ref: SubnetA
+        - Ref: SubnetB
+      SecurityGroupIds:
+        - Ref: EndpointSecurityGroup
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      VpcId:
+        Ref: VPC
+
+  SSMMESSAGESVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - .ssmmessages
+      SubnetIds:
+        - Ref: SubnetA
+        - Ref: SubnetB
+      SecurityGroupIds:
+        - Ref: EndpointSecurityGroup
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      VpcId:
+        Ref: VPC
+
+  transferVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - .transfer
+      SubnetIds:
+        - Ref: SubnetA
+        - Ref: SubnetB
+      SecurityGroupIds:
+        - Ref: EndpointSecurityGroup
+      PrivateDnsEnabled: true
+      VpcEndpointType: Interface
+      VpcId:
+        Ref: VPC
+
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private Endpoint SecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !Ref VPCCIDR
+          FromPort: 443
+          ToPort: 443
+      VpcId:
+        Ref: VPC
+
+  RequestedInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref SubnetA
+      SecurityGroupIds:
+        - !Ref AppSG
+      Tags:
+        - Key: Name
+          Value: sftpclient 
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/bin/bash -xe
+          aws s3api put-object --bucket mysftp-${AWS::AccountId}${AWS::Region} --key root/
+          groupadd  -g 10002 testgroup
+          useradd -u 10002 testuser
+          mkdir -p /mnt/efs
+          mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,sync ${EFSFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /mnt/efs
+          mkdir /mnt/efs/root
+          chown testuser  /mnt/efs/root
+          ssh-keygen -t rsa -b 4096  -f ~testuser/sftp_key -N ''
+          chown testuser ~testuser/sftp_key*
+          aws transfer  import-ssh-public-key --server-id ${SftpServer.ServerId} --ssh-public-key-body  "$(cat ~testuser/sftp_key.pub)"  --user-name  sftpuser  --region ${AWS::Region}
+
+  EC2InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+  EC2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: EC2InstanceProfile
+      Roles:
+        - !Ref EC2InstanceRole
+
+
+  SSMParamTagPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: SSMParamTagPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'ssm:PutParameter*'
+              - 'ssm:AddTags*'
+            Resource: '*'
+      Roles:
+        - !Ref EC2InstanceRole
+
+  TransferPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: TransferPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'transfer:ImportSshPublicKey'
+              - 'transfer:UpdateUser'
+            Resource: '*'
+      Roles:
+        - !Ref EC2InstanceRole
+
+  S3Policy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: S3Policy
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:GetObjectVersion'
+              - 's3:DeleteObjectVersion'
+            Resource: !Sub arn:aws:s3:::mysftp-${AWS::AccountId}${AWS::Region}/*
+          - Effect: Allow
+            Action:
+                - kms:Encrypt
+                - kms:Decrypt
+                - kms:ReEncrypt*
+                - kms:GenerateDataKey
+                - kms:DescribeKey
+            Resource: "*"
+          -
+            Effect: Allow
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Resource: !Sub arn:aws:s3:::mysftp-${AWS::AccountId}${AWS::Region}
+      Roles:
+        - !Ref EC2InstanceRole
+
+  EFSFileSystem:
+    Type: 'AWS::EFS::FileSystem'
+    Properties:
+      Encrypted: true
+
+
+  EFSMountTargetA:
+    Type: 'AWS::EFS::MountTarget'
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      # SubnetId: !Ref SubnetA
+      SubnetId: !Ref SubnetA
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+  EFSMountTargetB:
+    Type: 'AWS::EFS::MountTarget'
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      SubnetId: !Ref SubnetB
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+
+  EFSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: EFS Security Group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref AppSG
+
+  AppSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Application Security Group
+      VpcId: !Ref VPC
+
+
+  DNSPHZ:
+    Type: "AWS::Route53::HostedZone"
+    Properties:
+      HostedZoneConfig:
+        Comment: "Private Hosted Zone"
+      Name: !Ref DNSPHZName
+      VPCs:
+        - VPCId: !Ref VPC
+          VPCRegion: !Ref 'AWS::Region'
+
+
+  MyBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: SftpS3SnsTopicPolicy
+    Properties:
+      BucketName: !Sub mysftp-${AWS::AccountId}${AWS::Region}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt S3SFTPKey.Arn
+      PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+      NotificationConfiguration:
+        TopicConfigurations:
+            - Event: 's3:ObjectCreated:*'
+              Filter:
+                S3Key:
+                    Rules:
+                      - Name: "prefix"
+                        Value: "root/"
+              Topic: !Ref SftpS3SnsTopic
+
+  SftpS3SnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: SftpS3SnsTopic
+
+  SftpS3SnsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: SftpS3SnsTopicPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: SftpS3SnsTopicPolicy
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action: sns:Subscribe
+          Resource: !Ref SftpS3SnsTopic
+        - Sid: S3 Policy
+          Effect: Allow
+          Principal:
+            Service: s3.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref SftpS3SnsTopic
+          Condition:
+            ArnLike:
+              aws:SourceArn: !Sub arn:aws:s3:::mysftp-${AWS::AccountId}${AWS::Region}
+
+      Topics:
+      - !Ref SftpS3SnsTopic
+
+
+
+  SftpAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub SftpAccessPolicy-${AWS::Region}
+      Description: Sftp access policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+              - 's3:GetObjectVersion'
+              - 's3:DeleteObjectVersion'
+            Resource: !Sub arn:aws:s3:::mysftp-${AWS::AccountId}${AWS::Region}/*
+          - Effect: Allow
+            Action:
+                - kms:Encrypt
+                - kms:Decrypt
+                - kms:ReEncrypt*
+                - kms:GenerateDataKey
+                - kms:DescribeKey
+            Resource: "*"
+          -
+            Effect: Allow
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Resource: !Sub arn:aws:s3:::mysftp-${AWS::AccountId}${AWS::Region}
+            Condition:
+              StringLike:
+                's3:prefix': 'root/*'
+
+
+  SftpAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'transfer.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref SftpAccessPolicy
+
+  SftpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/transfer/${SftpServer.ServerId}
+      RetentionInDays: 90
+
+  SftpLogPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub SftpLogPolicy-${AWS::Region}
+      Description: Sftp Log access policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Action:
+                - "logs:CreateLogGroup"
+                - "logs:CreateLogStream"
+                - "logs:PutLogEvents"
+                - "logs:DescribeLogStreams"
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/transfer/*:*
+
+
+  SftpLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'transfer.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref SftpLogPolicy
+
+  SftpServer:
+    Type: AWS::Transfer::Server
+    Properties:
+      EndpointDetails:
+        VpcEndpointId: !Ref SftpVPCEndpoint
+      EndpointType: VPC_ENDPOINT
+      IdentityProviderType: SERVICE_MANAGED
+      LoggingRole: !GetAtt SftpLogRole.Arn
+      Tags:
+        - Key: Name
+          Value: SftpServer
+
+  SftpVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      SecurityGroupIds:
+        - !Ref SftpVPCEndpointSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.transfer.server
+      SubnetIds:
+        - !Ref SubnetA
+        - !Ref SubnetB
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+  SftpUser:
+    Type: AWS::Transfer::User
+    Properties:
+      UserName: sftpuser
+      HomeDirectory: !Sub /mysftp-${AWS::AccountId}${AWS::Region}/root
+      Role: !GetAtt SftpAccessRole.Arn
+      ServerId: !GetAtt SftpServer.ServerId
+#      SshPublicKeys:
+#          - !Sub '${SftpKey}'
+
+  SftpVPCEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sftp  Endpoint Security Group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.0.0/8
+      Tags:
+        - Key: Name
+          Value: !Sub SG-${AWS::StackName}
+
+  SftpDNSRecord:
+    Type: "AWS::Route53::RecordSetGroup"
+    Properties:
+      HostedZoneId: !Ref DNSPHZ
+      RecordSets:
+      - Name: !Sub mysftp.${DNSPHZName}
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Select [0, !Split [":", !Select [0, !GetAtt SftpVPCEndpoint.DnsEntries]]]
+          DNSName: !Select [1, !Split [":", !Select [0, !GetAtt SftpVPCEndpoint.DnsEntries]]]
+
+
+  EFSAccessPoint:
+    Type: 'AWS::EFS::AccessPoint'
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      PosixUser:
+        Uid: "10002"
+        Gid: "10002"
+      RootDirectory:
+        CreationInfo:
+          OwnerGid: "10002"
+          OwnerUid: "10002"
+          Permissions: "0770"
+        Path: "/"
+
+  S3toEFSCopyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", ["S3toEFSCopyLambda", Ref: "AWS::Region",]]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Path: /
+      Policies:
+      - PolicyName: S3toEFSPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - "elasticfilesystem:ClientMount"
+                - "elasticfilesystem:ClientWrite"
+                - "elasticfilesystem:DescribeMountTargets"
+              Effect: Allow
+              Resource: "*"
+            - Action:
+                - 's3:Get*'
+                - 's3:List*'
+              Effect: Allow
+              Resource: "*"
+            - Action:
+                - sns:Subscribe
+              Resource: "*"
+              Effect: "Allow"
+            - Action:
+                - ec2:CreateNetworkInterface
+                - ec2:DeleteNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+              Resource: "*"
+              Effect: "Allow"
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource:
+                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/S3toEFSCopy:*
+            - Effect: Allow
+              Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey
+                  - kms:DescribeKey
+              Resource:
+                - !GetAtt S3SFTPKey.Arn
+
+  S3toEFSCopyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: S3toEFSCopy
+      Runtime: python3.7
+      Role: !GetAtt S3toEFSCopyLambdaRole.Arn
+      Timeout: 300
+      Handler: index.lambda_handler
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref AppSG
+        SubnetIds:
+          - !Ref SubnetA
+          - !Ref SubnetB
+      FileSystemConfigs:
+          - LocalMountPath: "/mnt/sftp"
+            Arn: !GetAtt EFSAccessPoint.Arn
+      Code:
+        ZipFile: |
+            import json
+            import boto3
+            from pathlib import Path
+
+            def lambda_handler(event, context):
+                message = event['Records'][0]['Sns']['Message']
+                y = json.loads(message)
+                bucket=y['Records'][0]['s3']['bucket']['name']
+                print(bucket)
+                object=y['Records'][0]['s3']['object']['key']
+                objectname=object.split("/")[-1]
+                print(object)
+                s3_client = boto3.client('s3')
+                local_file = '/mnt/sftp/'+object
+                object_dir= '/mnt/sftp/'+object.rstrip(objectname)
+                print(object_dir)
+                Path(object_dir).mkdir(parents=True, exist_ok=True)
+                print(local_file)
+                response = s3_client.download_file(bucket, object, local_file)
+                print(response)
+
+  S3toEFSCopypermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt S3toEFSCopyLambda.Arn
+      Principal: sns.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Ref SftpS3SnsTopic
+
+  S3toEFSCopySNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt S3toEFSCopyLambda.Arn
+      Protocol: lambda
+      TopicArn: !Ref SftpS3SnsTopic
+
+  S3SFTPKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for S3 Encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Join:
+                - ''
+                - - 'arn:aws:iam::'
+                  - Ref: AWS::AccountId
+                  - :root
+            Action: kms:*
+            Resource: '*'
+#          - Sid: Allow  use of the CMK
+#            Effect: Allow
+#            Principal:
+#              AWS:
+#                - !Sub arn:aws:iam::${AWS::AccountId}:role/S3toEFSCopyLambda-${AWS::Region}
+#                 - - !Sub arn:aws:iam::${AWS::AccountId}:root
+#            Action:
+#                - kms:Decrypt
+#                - kms:DescribeKey
+#            Resource: "*"
+  S3SFTPKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: "alias/S3SFTPKey"
+      TargetKeyId: !Ref S3SFTPKey
