@@ -1,6 +1,8 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
+    This template is part of AWS Transfer Blog Post from R.SIMON from DXC Technology. Exceution of this template is end user responsability
+    
 
 Parameters:
 #  VPC:
@@ -211,7 +213,7 @@ Resources:
         - !Ref AppSG
       Tags:
         - Key: Name
-          Value: sftpclient 
+          Value: sftpclient
       UserData:
         Fn::Base64:
           !Sub |
