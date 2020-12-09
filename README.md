@@ -1,6 +1,6 @@
-[Modernizing SFTP services]{.ul}
+#Modernizing SFTP services
 
-[Context]{.ul}
+##Context
 
 As an AWS Solution Architect in DXC Technology, when moving on premises
 workload to AWS, we can see many clients having somewhere in their
@@ -19,7 +19,7 @@ The first reaction is usually "Well let's put a small T2 instance and
 that would be right for now". Going further in the discussion with the
 client, some additional challenges might appear.
 
-[The business requirements]{.ul}
+##The business requirements
 
 -   Support critical business operations: The solution needs to be
     highly available & highly scalable, as exchange with other
@@ -40,7 +40,7 @@ We will first cover the proposed solution, then deep dive in the key
 steps of the AWS CloudFormation Code, and finally see some potential
 evolution for further stages.
 
-[Prerequisites]{.ul}
+##Prerequisites
 
 For this walkthrough, you should have the following prerequisites:
 
@@ -90,7 +90,7 @@ Click on Create Stack.
 
 It will take some 5 minutes to complete.
 
-[The solution]{.ul}
+#The solution
 
 ![](media\image5.png){width="6.083333333333333in"
 height="4.751628390201224in"}
@@ -130,13 +130,13 @@ template. It ensures that our deployment is repeatable the same way on
 different accounts and regions, and that in the end we will be able to
 clean up everything easily.
 
-**[First Step : Let's create a VPC & Private Hosted Zone]{.ul}**
+**[First Step : Let's create a VPC & Private Hosted Zone]**
 
 We will create a private only VPC in 2 Availability Zones with no Access
 to the Internet. We also create a Route53 Private Hosted Zone with
 myexample.com DNS Name.
 
-**[Step 2: Creation of Amazon S3 bucket]{.ul}**
+**[Step 2: Creation of Amazon S3 bucket]**
 
 We create the Amazon S3 bucket which will be the backend of the SFTP
 Server. It will host the files for the Sftp server.
@@ -868,7 +868,7 @@ As files are on Amazon S3, more automation can be done like :
 -   Now that AWS Event Bridge can be a source for Amazon S3 we could
     replace perhaps Amazon SNS.
 
-[Cleanup]{.ul}
+##[Cleanup]
 
 To delete all resources named in this post, just delete the AWS
 CloudFormation Stack. Before doing that delete all the files you may
