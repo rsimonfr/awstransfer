@@ -2,7 +2,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
     This template is part of AWS Transfer Blog Post from R.SIMON from DXC Technology. Exceution of this template is end user responsability
-    
+
 
 Parameters:
 #  VPC:
@@ -71,6 +71,9 @@ Resources:
       EnableDnsHostnames: true
       CidrBlock:
         Ref: VPCCIDR
+      Tags:
+        - Key: Name
+          Value: !Sub vpc-${AWS::StackName}
   SubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -204,6 +207,10 @@ Resources:
 
   RequestedInstance:
     Type: 'AWS::EC2::Instance'
+    DependsOn:
+      - SftpServer
+      - S3VPCEndpoint
+      - EFSAccessPoint
     Properties:
       ImageId: !Ref AmiId
       InstanceType: !Ref InstanceType
