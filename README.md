@@ -29,8 +29,8 @@ sftp> ls
 testfile.txt
 sftp> quit
 
-
 then let’s disconnect
+
 And  if we go on the EFS drive we can see the file has been copied
 
 [testuser@ip-10-1-0-142 ~]$ cd /mnt/efs
@@ -40,10 +40,10 @@ root
 [testuser@ip-10-1-0-142 root]$ ls
 testfile.txt
 [testuser@ip-10-1-0-142 root]$ ls -l
+
 total 4
 -rw-rw-r-- 1 testuser testgroup 20 Dec  1 13:50 testfile.txt
 [testuser@ip-10-1-0-142 root]$ cat testfile.txt
 this is a test file
-[testuser@ip-10-1-0-142 root]$
 
 And this concludes our test !
