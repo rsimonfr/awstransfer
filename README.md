@@ -18,7 +18,7 @@ The template will have created a sftp_key file so let’s use it.
 We can also check our home directory.<p>
 
 [testuser@ip-10-1-0-142 ~]$ echo "this is a test file" > /tmp/testfile.txt <p>
-[testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com<p><<p>p>
+[testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com<p>
 Connected to mysftp.myexample.com.<p>
 sftp> pwd<p>
 Remote working directory: /mysftp-854859737127eu-west-1/root<p>
