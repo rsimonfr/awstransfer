@@ -225,7 +225,7 @@ Resources:
         Fn::Base64:
           !Sub |
           #!/bin/bash -xe
-          aws s3api put-object --bucket mysftp-${AWS::AccountId}${AWS::Region} --key root/
+          aws s3api put-object --bucket mysftp-${AWS::AccountId}${AWS::Region} --key root/ --region ${AWS::Region}
           groupadd  -g 10002 testgroup
           useradd -u 10002 testuser
           mkdir -p /mnt/efs
