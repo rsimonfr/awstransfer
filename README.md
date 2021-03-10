@@ -6,13 +6,16 @@ As the VPC is completely private, we connect to the Instance via AWS Session Man
 Select EC2 as service and go to the 2 EC2 Dashboard. You can use Filter field to filter the instance and select sfpclient one and click on Connect
 
 Select Session Manager tab and click on Connect
-  
+
 
 Let’s sudo testuser & then check EFS is mounted
 sudo su - testuser
 df -k
 
-Let’s create a test file & connect to the SFTP  & upload the file. The template will have created a sftp_key file so let’s use it.  We can also check our home directory.
+Let’s create a test file & connect to the SFTP  & upload the file.
+The template will have created a sftp_key file so let’s use it.
+We can also check our home directory.
+
 [testuser@ip-10-1-0-142 ~]$ echo "this is a test file" > /tmp/testfile.txt
 [testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com
 Connected to mysftp.myexample.com.
@@ -29,6 +32,7 @@ sftp> quit
 
 then let’s disconnect
 And  if we go on the EFS drive we can see the file has been copied
+
 [testuser@ip-10-1-0-142 ~]$ cd /mnt/efs
 [testuser@ip-10-1-0-142 efs]$ ls
 root
