@@ -21,10 +21,10 @@ We can also check our home directory.<p>
 [testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com<p>
 Connected to mysftp.myexample.com.<p>
 sftp> pwd<p>
-Remote working directory: /mysftp-854859737127eu-west-1/root<p>
+Remote working directory: /mysftp-accountideu-west-1/root<p>
 sftp> ls<p>
 sftp> mput /tmp/testfile.txt<p>
-Uploading /tmp/testfile.txt to /mysftp-854859737127eu-west-1/root/testfile.txt
+Uploading /tmp/testfile.txt to /mysftp-accountideu-west-1/root/testfile.txt
 /tmp/testfile.txt                                                                                              100%   20     3.5KB/s   00:00<p>
 sftp> ls<p>
 testfile.txt<p>
