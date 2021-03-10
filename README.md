@@ -16,34 +16,34 @@ Let’s create a test file & connect to the SFTP  & upload the file.
 The template will have created a sftp_key file so let’s use it.
 We can also check our home directory.
 `
-[testuser@ip-10-1-0-142 ~]$ echo "this is a test file" > /tmp/testfile.txt
-[testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com
-Connected to mysftp.myexample.com.
-sftp> pwd
-Remote working directory: /mysftp-854859737127eu-west-1/root
-sftp> ls
-sftp> mput /tmp/testfile.txt
+[testuser@ip-10-1-0-142 ~]$ echo "this is a test file" > /tmp/testfile.txt <p>
+[testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com<p><<p>p>
+Connected to mysftp.myexample.com.<p>
+<p>sftp> pwd<p>
+Rem<p>ote working directory: /mysftp-854859737127eu-west-1/root<p>
+sftp> ls<p>
+sftp> mput /tmp/testfile.txt<p>
 Uploading /tmp/testfile.txt to /mysftp-854859737127eu-west-1/root/testfile.txt
-/tmp/testfile.txt                                                                                              100%   20     3.5KB/s   00:00
-sftp> ls
-testfile.txt
-sftp> quit
+/tmp/testfile.txt                                                                                              100%   20     3.5KB/s   00:00<p>
+sftp> ls<p>
+testfile.txt<p>
+sftp> quit<p>
 `
 then let’s disconnect
 
 And  if we go on the EFS drive we can see the file has been copied
 `
-[testuser@ip-10-1-0-142 ~]$ cd /mnt/efs
-[testuser@ip-10-1-0-142 efs]$ ls
-root
-[testuser@ip-10-1-0-142 efs]$ cd root
-[testuser@ip-10-1-0-142 root]$ ls
-testfile.txt
-[testuser@ip-10-1-0-142 root]$ ls -l
+[testuser@ip-10-1-0-142 ~]$ cd /mnt/efs<p>
+[testuser@ip-10-1-0-142 efs]$ ls<p>
+root<p>
+[testuser@ip-10-1-0-142 efs]$ cd root<p>
+[testuser@ip-10-1-0-142 root]$ ls<p>
+testfile.txt<p>
+[testuser@ip-10-1-0-142 root]$ ls -l<p>
 
-total 4
--rw-rw-r-- 1 testuser testgroup 20 Dec  1 13:50 testfile.txt
-[testuser@ip-10-1-0-142 root]$ cat testfile.txt
-this is a test file
+total 4<p>
+-rw-rw-r-- 1 testuser testgroup 20 Dec  1 13:50 testfile.txt<p>
+[testuser@ip-10-1-0-142 root]$ cat testfile.txt<p>
+this is a test file<p>
 `
 And this concludes our test !
