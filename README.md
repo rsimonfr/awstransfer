@@ -19,8 +19,8 @@ We can also check our home directory.
 [testuser@ip-10-1-0-142 ~]$ echo "this is a test file" > /tmp/testfile.txt <p>
 [testuser@ip-10-1-0-142 ~]$ sftp -i sftp_key sftpuser@mysftp.myexample.com<p><<p>p>
 Connected to mysftp.myexample.com.<p>
-<p>sftp> pwd<p>
-Rem<p>ote working directory: /mysftp-854859737127eu-west-1/root<p>
+sftp> pwd<p>
+Remote working directory: /mysftp-854859737127eu-west-1/root<p>
 sftp> ls<p>
 sftp> mput /tmp/testfile.txt<p>
 Uploading /tmp/testfile.txt to /mysftp-854859737127eu-west-1/root/testfile.txt
